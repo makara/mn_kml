@@ -44,16 +44,13 @@ function mn_kml_manage_maps() {
  * Implementation of hook_openlayers_postrender_alter().
  */
 function mn_kml_openlayers_postrender_alter(&$map) {
-  $contexts = array_shift(context_get());
-  foreach ($contexts as $context) {
-    if ($context->name == 'mn-display_mode-map') {
-      $kmls = array(variable_get('mn_kml_paths', ''));
-      foreach ($kmls as $kml) {
-        if ($kml != '') {
-          $map['layers'][$kml] = $kml;
-          $map['layer_activated'][$kml] = $kml;
-          // $map['layer_switcher'][$kml] = $kml;
-        }
+  if (context_get('context', 'mn-display_mode-map')) {
+    $kmls = array(variable_get('mn_kml_paths', ''));
+    foreach ($kmls as $kml) {
+      if ($kml != '') {
+        $map['layers'][$kml] = $kml;
+        $map['layer_activated'][$kml] = $kml;
+        // $map['layer_switcher'][$kml] = $kml;
       }
     }
   }
