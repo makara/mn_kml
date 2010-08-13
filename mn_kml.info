@@ -1,0 +1,4 @@
+name = "MN KML"
+description = "Allows users to add KML overlays to maps in Managing News"
+dependencies[] = openlayers
+core = "6.x"
