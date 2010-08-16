@@ -1,6 +1,17 @@
 <?php
 
 /**
+ * Implementation of hook_theme().
+ */
+function mn_kml_theme() {
+  $items = array();
+  $items['mn_kml_admin'] = array(
+    'arguments' => array('form' => array()),
+  );
+  return $items;
+}
+
+/**
  * Implementation of hook_ctools_plugin_api().
  */
 function mn_kml_ctools_plugin_api() {
@@ -16,10 +27,17 @@ function mn_kml_ctools_plugin_api() {
 function mn_kml_menu() {
   $items = array();
   $items['admin/settings/mn_kml'] = array(
-    'title' => 'KML settings',
+    'title' => 'Manage KML',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('mn_kml_manage_maps'),
+    'page arguments' => array('mn_kml_admin_form'),
     'access arguments' => array('administer site configuration'),
+  );
+  $items['admin/settings/mn_kml/%/remove'] = array(
+    'title' => 'Remove',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mn_kml_confirm_remove_form', 3),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_LOCAL_TASK,
   );
   return $items;
 }
@@ -27,17 +45,68 @@ function mn_kml_menu() {
 /**
  * Page callback for Manage Maps.
  */
-function mn_kml_manage_maps() {
-  $form = array();
-  $defaults = variable_get('mn_kml_paths', '');
-  
-  $form['mn_kml_paths'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Add KML'),
-    '#description' => t('Add the URL of your KML or the relative path to a file within your Drupal installation.'),
-    '#default_value' => $defaults,
+function mn_kml_admin_form() {
+  $form = array(
+    '#theme' => 'mn_kml_admin',
+    '#kmlpaths' => variable_get('mn_kml_paths', array()),
   );
-  return system_settings_form($form);
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Layer title'),
+  );
+  $form['path'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Path to KML file'),
+    '#description' => t('Add the URL of your KML or the relative path to a file within your Drupal installation.'),
+  );
+  $form['submit'] = array(
+    '#value' => t('Add KML file'),
+    '#type' => 'submit',
+    '#submit' => array('mn_kml_admin_form_submit'),
+  );
+  return $form;
+}
+
+/**
+ * Submit handler for KML form
+ */
+function mn_kml_admin_form_submit(&$form, &$form_state) {
+  $kmlpaths = variable_get('mn_kml_paths', array());
+  if (!empty($form_state['values']['path'])) {
+    $kmlpaths[] = array(
+      'title' => $form_state['values']['title'],
+      'path' => $form_state['values']['path'],
+    );
+  }
+  variable_set('mn_kml_paths', $kmlpaths);
+}
+
+/**
+ * Remove confirmation form.
+ */
+function mn_kml_confirm_remove_form(&$form_state, $kml_id) {
+  $form = array();
+  $form['kml_id'] = array('#type' => 'value', '#value' => $kml_id);
+  $message = t('This action will remove the KML file from the maps on your site. The KML file will not be deleted.');
+  $form = confirm_form($form,
+    t('Are you sure you want to remove this KML file?'),
+    'admin/settings/mn_kml',
+    $message,
+    'Remove', t('Cancel')
+  );
+
+  return $form;
+}
+
+/**
+ * Submit handler for mn_kml_confirm_remove_form.
+ */
+function mn_kml_confirm_remove_form_submit($form, &$form_state) {
+  var_dump($form_state['values']);
+  $kmlpaths = variable_get('mn_kml_paths', array());
+  unset($kmlpaths[$form_state['values']['kml_id']]);
+  variable_set('mn_kml_paths', $kmlpaths);
+  $form_state['redirect'] = 'admin/settings/mn_kml';
 }
 
 /**
@@ -45,12 +114,11 @@ function mn_kml_manage_maps() {
  */
 function mn_kml_openlayers_postrender_alter(&$map) {
   if (context_get('context', 'mn-display_mode-map')) {
-    $kmls = array(variable_get('mn_kml_paths', ''));
+    $kmls = variable_get('mn_kml_paths', array());
     foreach ($kmls as $kml) {
       if ($kml != '') {
-        $map['layers'][$kml] = $kml;
-        $map['layer_activated'][$kml] = $kml;
-        // $map['layer_switcher'][$kml] = $kml;
+        $map['layers'][$kml['path']] = $kml['path'];
+        $map['layer_activated'][$kml['path']] = $kml['path'];
       }
     }
   }
@@ -61,23 +129,55 @@ function mn_kml_openlayers_postrender_alter(&$map) {
  */
 function mn_kml_openlayers_layers() {
   $layers = array();
-  $kmls = array(variable_get('mn_kml_paths', ''));
+  $kmls = variable_get('mn_kml_paths', array());
   foreach ($kmls as $kml) {
     //Build Layer
     $layer = new StdClass();
     $layer->api_version = 1;
-    $layer->name = $kml;
-    $layer->title = $kml;
+    $layer->name = $kml['path'];
+    $layer->title = $kml['title'];
     $layer->description = $view->description . ' - ' . $data->display_title;
     $layer->data = array(
       'layer_type' => 'openlayers_layer_type_kml',
       'projection' => array('4326', '900913', '4269'),
       'baselayer' => FALSE,
       'type' => 'KML',
-      'url' => $kml,
+      'url' => $kml['path'],
       'options' => array(),
     );
     $layers[$layer->name] = $layer;
   }
   return $layers;
+}
+
+/**
+ * Theme function for admin form.
+ */
+function theme_mn_kml_admin($form) {
+  $rows = array();
+
+  if (empty($form['#kmlpaths'])) {
+    $rows[] = array(array('data' => check_plain(t('There are no KML files.')), 'colspan' => 3, 'class' => 'tag'));
+  }
+  else {
+    foreach ($form['#kmlpaths'] as $id => $kmlpath) {
+      $row = array();
+      $row['data'][] = $kmlpath['title'];
+      $row['data'][] = $kmlpath['path'];
+      $row['data'][] = l(t('Remove'), "admin/settings/mn_kml/$id/remove");
+      $rows[] = $row;
+    }
+  }
+
+  $output = '';
+  $output .= theme('table', array(t('Title'), t('KML File'), t('Operations')), $rows);
+  $output .= drupal_render($form);
+  return $output;
+}
+
+/**
+ * Implementation of hook_mn_core_admin_paths_alter().
+ */
+function mn_kml_mn_core_admin_paths_alter(&$paths) {
+  $paths['admin/settings/mn_kml'] = 'Manage KML';
 }
