@@ -110,9 +110,9 @@ function mn_kml_confirm_remove_form_submit($form, &$form_state) {
 }
 
 /**
- * Implementation of hook_openlayers_postrender_alter().
+ * Implementation of hook_openlayers_map_preprocess_alter().
  */
-function mn_kml_openlayers_postrender_alter(&$map) {
+function mn_kml_openlayers_map_preprocess_alter(&$map) {
   if (context_get('context', 'mn-display_mode-map')) {
     $kmls = variable_get('mn_kml_paths', array());
     foreach ($kmls as $kml) {
