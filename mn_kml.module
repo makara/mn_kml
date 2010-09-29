@@ -49,15 +49,16 @@ function mn_kml_admin_form() {
   $form = array(
     '#theme' => 'mn_kml_admin',
     '#kmlpaths' => variable_get('mn_kml_paths', array()),
+    '#attributes' => array('enctype' => 'multipart/form-data'),
   );
   $form['title'] = array(
     '#type' => 'textfield',
     '#title' => t('Layer title'),
   );
-  $form['path'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Path to KML file'),
-    '#description' => t('Add the URL of your KML or the relative path to a file within your Drupal installation.'),
+  $form['upload'] = array(
+    '#type' => 'file',
+    '#title' => t('Upload KML file'),
+    '#size' => 40,
   );
   $form['submit'] = array(
     '#value' => t('Add KML file'),
@@ -71,6 +72,17 @@ function mn_kml_admin_form() {
  * Submit handler for KML form
  */
 function mn_kml_admin_form_submit(&$form, &$form_state) {
+  $kml_dir = file_directory_path() .'/kml';
+  file_check_directory($kml_dir, TRUE);
+
+  if ($file = file_save_upload('upload', array(), $kml_dir)) {
+    file_set_status($file, FILE_STATUS_PERMANENT);
+    $form_state['values']['path'] = $file->filepath;
+  }
+  else {
+
+  }
+
   $kmlpaths = variable_get('mn_kml_paths', array());
   if (!empty($form_state['values']['path'])) {
     $kmlpaths[] = array(
@@ -87,7 +99,7 @@ function mn_kml_admin_form_submit(&$form, &$form_state) {
 function mn_kml_confirm_remove_form(&$form_state, $kml_id) {
   $form = array();
   $form['kml_id'] = array('#type' => 'value', '#value' => $kml_id);
-  $message = t('This action will remove the KML file from the maps on your site. The KML file will not be deleted.');
+  $message = t('This action will remove the KML file from the maps on your site.');
   $form = confirm_form($form,
     t('Are you sure you want to remove this KML file?'),
     'admin/settings/mn_kml',
@@ -103,9 +115,14 @@ function mn_kml_confirm_remove_form(&$form_state, $kml_id) {
  */
 function mn_kml_confirm_remove_form_submit($form, &$form_state) {
   $kmlpaths = variable_get('mn_kml_paths', array());
-  unset($kmlpaths[$form_state['values']['kml_id']]);
-  variable_set('mn_kml_paths', $kmlpaths);
-  $form_state['redirect'] = 'admin/settings/mn_kml';
+  if (file_delete($kmlpaths[$form_state['values']['kml_id']]['path'])) {
+    unset($kmlpaths[$form_state['values']['kml_id']]);
+    variable_set('mn_kml_paths', $kmlpaths);
+    $form_state['redirect'] = 'admin/settings/mn_kml';
+  }
+  else {
+    drupal_set_message(t('Failed to delete this KML file.'), 'error');
+  }
 }
 
 /**
@@ -138,7 +155,6 @@ function mn_kml_openlayers_layers() {
     $layer->description = $view->description . ' - ' . $data->display_title;
     $layer->data = array(
       'layer_type' => 'openlayers_layer_type_kml',
-      'projection' => array('4326', '900913', '4269'),
       'baselayer' => FALSE,
       'type' => 'KML',
       'url' => $kml['path'],
