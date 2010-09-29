@@ -155,7 +155,7 @@ function mn_kml_openlayers_layers() {
     $layer->title = $kml['title'];
     $layer->description = $view->description . ' - ' . $data->display_title;
     $layer->data = array(
-      'layer_type' => 'openlayers_layer_type_kml',
+      'layer_type' => 'openlayers_layer_type_mn_kml',
       'baselayer' => FALSE,
       'type' => 'KML',
       'url' => $kml['path'],
@@ -196,4 +196,23 @@ function theme_mn_kml_admin($form) {
  */
 function mn_kml_mn_core_admin_paths_alter(&$paths) {
   $paths['admin/settings/mn_kml'] = 'Manage KML';
+}
+
+/**
+ * Implementation of hook_openlayers_layer_type().
+ */
+function mn_kml_openlayers_layer_types() {
+  return array(
+    'openlayers_layer_type_mn_kml' => array(
+      'title' => t('MN KML'),
+      'description' => t('Customized KML layer for MN.'),
+      'type' => 'layer',
+      'path' => drupal_get_path('module', 'mn_kml') . '/openlayers',
+      'file' => 'openlayers_layer_type_mn_kml.inc',
+      'layer_type' => array(
+        'class' => 'openlayers_layer_type_mn_kml',
+        'parent' => 'openlayers_layer_type',
+      ),
+    ),
+  );
 }
