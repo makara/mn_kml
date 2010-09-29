@@ -132,9 +132,10 @@ function mn_kml_openlayers_map_preprocess_alter(&$map) {
   if (context_get('context', 'mn-display_mode-map')) {
     $kmls = variable_get('mn_kml_paths', array());
     foreach ($kmls as $kml) {
-      if ($kml != '') {
+      if (!empty($kml)) {
         $map['layers'][$kml['path']] = $kml['path'];
         $map['layer_activated'][$kml['path']] = $kml['path'];
+        $map['layer_switcher'][$kml['path']] = $kml['path'];
       }
     }
   }
