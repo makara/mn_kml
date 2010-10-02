@@ -146,6 +146,8 @@ function mn_kml_openlayers_map_preprocess_alter(&$map) {
  * Implementation of hook_openlayers_layers().
  */
 function mn_kml_openlayers_layers() {
+  global $base_url;
+var_dump($base_url);
   $layers = array();
   $kmls = variable_get('mn_kml_paths', array());
   foreach ($kmls as $kml) {
@@ -159,8 +161,7 @@ function mn_kml_openlayers_layers() {
       'layer_type' => 'openlayers_layer_type_mn_kml',
       'baselayer' => FALSE,
       'type' => 'KML',
-      'url' => $kml['path'],
-      'options' => array(),
+      'url' => $base_url . '/' . $kml['path'],
     );
     $layers[$layer->name] = $layer;
   }
