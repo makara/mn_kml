@@ -54,6 +54,7 @@ function mn_kml_admin_form() {
   $form['title'] = array(
     '#type' => 'textfield',
     '#title' => t('Layer title'),
+    '#required' => TRUE,
   );
   $form['upload'] = array(
     '#type' => 'file',
@@ -80,7 +81,7 @@ function mn_kml_admin_form_submit(&$form, &$form_state) {
     $form_state['values']['path'] = $file->filepath;
   }
   else {
-
+    form_error($form['upload'], t('The file upload failed.'));
   }
 
   $kmlpaths = variable_get('mn_kml_paths', array());
