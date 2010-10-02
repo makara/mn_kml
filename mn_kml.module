@@ -147,7 +147,6 @@ function mn_kml_openlayers_map_preprocess_alter(&$map) {
  */
 function mn_kml_openlayers_layers() {
   global $base_url;
-var_dump($base_url);
   $layers = array();
   $kmls = variable_get('mn_kml_paths', array());
   foreach ($kmls as $kml) {
