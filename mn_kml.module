@@ -161,7 +161,7 @@ function mn_kml_openlayers_layers() {
       'layer_type' => 'openlayers_layer_type_mn_kml',
       'baselayer' => FALSE,
       'type' => 'KML',
-      'url' => file_create_path('kml/' . $kml['path']),
+      'url' => $base_url . '/' . file_create_path('kml/' . $kml['path']),
     );
     $layers[$layer->name] = $layer;
   }
